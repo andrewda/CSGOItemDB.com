@@ -37,7 +37,7 @@ var router = express.Router();
 ////////////////////
 router.get('/', function(req, res) {
 	var query = res.req.query;
-	/*
+
 	if (query.key === undefined || query.item === undefined) {
 		res.json({ success: false, error: options.errors.missing_params });
 		return;
@@ -49,106 +49,93 @@ router.get('/', function(req, res) {
 		if(err) {
 			throw err;
 		}
-		var isPremium = keys.premium;
 
-		if(keys.length > 0) {
-			*/
-			Prices.findOne({
-				item: query.item
-			}, (err, prices) => {
-				if(err) {
-					throw err;
-				}
+		if (keys !== null) {
+			var isPremium = keys.premium;
 
-				if(prices != null) {
-					var current_price, avg_week_price, avg_month_price;
-
-					if (prices.current_price !== undefined && prices.avg_week_price !== undefined && prices.avg_month_price !== undefined) {
-						current_price = prices.current_price;
-						avg_week_price = prices.avg_week_price;
-						avg_month_price = prices.avg_month_price;
+			if (isPremium) {
+				Prices.findOne({
+					item: query.item
+				}, (err, prices) => {
+					if(err) {
+						throw err;
 					}
 
-					if (current_price !== undefined && avg_week_price !== undefined && avg_month_price !== undefined) {
-						res.json({ success: true, current_price: current_price, avg_week_price: avg_week_price, avg_month_price: avg_month_price, lastupdate: prices.lastupdate });
-					}					
-				} else {
-					// if the item is not found in our database, get the data from the market
-					request('http://steamcommunity.com/market/priceoverview/?country=US&currency=1&appid=730&market_hash_name=' + encodeURIComponent(query.item), function(error, response, body) {
-						var json = '';
-						
-						try {
-							json = JSON.parse(body);
-						} catch (e) {
-							res.json({ success: false, error: options.errors.unknown_item });
-							return;
+					if(prices != null) {
+						var current_price, avg_week_price, avg_month_price;
+
+						if (prices.current_price !== undefined && prices.avg_week_price !== undefined && prices.avg_month_price !== undefined) {
+							current_price = prices.current_price;
+							avg_week_price = prices.avg_week_price;
+							avg_month_price = prices.avg_month_price;
 						}
+
+						if (current_price !== undefined && avg_week_price !== undefined && avg_month_price !== undefined) {
+							res.json({ success: true, current_price: current_price, avg_week_price: avg_week_price, avg_month_price: avg_month_price, lastupdate: prices.lastupdate });
+						}					
+					} else {
+						// if the item is not found in our database, get the data from the market
+						request('http://steamcommunity.com/market/priceoverview/?country=US&currency=1&appid=730&market_hash_name=' + encodeURIComponent(query.item), function(error, response, body) {
+							var json = '';
+							
+							try {
+								json = JSON.parse(body);
+							} catch (e) {
+								res.json({ success: false, error: options.errors.unknown_item });
+								return;
+							}
+							
+							var current = Math.floor(Date.now() / 1000);
+							if (!error && response.statusCode === 200 && json.lowest_price !== undefined && json.median_price !== undefined) {
+								const a = new Prices({
+									"item": query.item,
+									"current_price": json.lowest_price.replace('$', ''),
+									"avg_week_price": json.median_price.replace('$', ''),
+									"avg_month_price": json.median_price.replace('$', ''),
+									"lastupdate": current	
+								});
+
+								a.save((err, response) => {
+									if (err) {
+										throw err;
+									}
+								})
+
+								const b = new History({
+									item: query.item,
+									current_price: json.median_price.replace('$', ''),
+									time: current
+								});
+
+								b.save((err, response) => {
+									if (err) {
+										throw err;
+									}
+								})
 						
-						var current = Math.floor(Date.now() / 1000);
-						if (!error && response.statusCode === 200 && json.lowest_price !== undefined && json.median_price !== undefined) {
-							const a = new Prices({
-								"item": query.item,
-								"current_price": json.lowest_price.replace('$', ''),
-								"avg_week_price": json.median_price.replace('$', ''),
-								"avg_month_price": json.median_price.replace('$', ''),
-								"lastupdate": current	
-							});
-
-							a.save((err, response) => {
-								if (err) {
-									throw err;
-								}
-							})
-
-							const b = new History({
-								item: query.item,
-								current_price: json.median_price.replace('$', ''),
-								time: current
-							});
-
-							b.save((err, response) => {
-								if (err) {
-									throw err;
-								}
-							})
-
-/*
-							Prices.findOne({
-								item: query.item,
-							}, (err, prices) => {
-								if(err) {
-									throw err;
-								}
-
-								if (prices !== null) {
-*/									
-							res.json({ 
-								success: true, 
-								current_price: json.lowest_price.replace('$', ''), 
-								avg_week_price: json.median_price.replace('$', ''), 
-								avg_month_price: json.median_price.replace('$', ''), 
-								lastupdate: current
-							});
-/*								
-								} else {
-									res.json({ success: false, error: options.errors.unknown_item });
-								}	
-*/						
-						} else {
-							res.json({ success: false, error: options.errors.unknown_item });
-						}
-					});
-				}
-			});
-/*
+								res.json({ 
+									success: true, 
+									current_price: json.lowest_price.replace('$', ''), 
+									avg_week_price: json.median_price.replace('$', ''), 
+									avg_month_price: json.median_price.replace('$', ''), 
+									lastupdate: current
+								});				
+							} else {
+								res.json({ success: false, error: options.errors.unknown_item });
+							}
+						});
+					}
+				});
+			} else {
+				res.json({ success: false, error: options.errors.not_premium });
+			}
+		} else {
+			res.json({ success: false, error: options.errors.invalid_key });
 		}
-
 	});
-*/
 });
 
 router.get('/all', function(req, res) {
-/*
 	var query = res.req.query;
 
 	if (query.key === undefined) {
@@ -162,11 +149,11 @@ router.get('/all', function(req, res) {
 		if(err) {
 			throw err;
 		}
-		var isPremium = keys.premium;
 
-		if (keys.length > 0) {
-			if (isPremium) {
-*/				
+		if (keys !== null) {
+			var isPremium = keys.premium;
+
+			if (isPremium) {		
 				Prices.find({}, (err, prices) => {
 					if(err) {
 						throw err;
@@ -182,7 +169,6 @@ router.get('/all', function(req, res) {
 
 					res.json({ success: true, items: output });
 				});
-				/*
 			} else {
 				res.json({ success: false, error: options.errors.not_premium });
 			}
@@ -190,28 +176,28 @@ router.get('/all', function(req, res) {
 			res.json({ success: false, error: options.errors.invalid_key });
 		}
 	});
-*/
 });
 
 router.get('/backpacktf', function(req, res) {
 	var query = res.req.query;
-/*	
+
 	if (query.key === undefined) {
 		res.json({ success: false, error: options.errors.missing_params });
 		return;
 	}
 	
 	// check if the key exists
-	connection.query('SELECT `premium` FROM `keys` WHERE `key`=?', [query.key], function(err, row) {
-		if (err) {
+	Keys.findOne({
+		key: query.key
+	}, (err, keys) => {
+		if(err) {
 			throw err;
 		}
-		
-		var isPremium = row[0].premium;
-		
-		if (row.length > 0) {
-			if (isPremium) {
-				*/
+
+		if (keys !== null) {
+			var isPremium = keys.premium;
+
+			if(isPremium) {
 				if (Math.floor(Date.now() / 1000) - lastCheck >= 120) {
 					request('http://backpack.tf/api/IGetMarketPrices/v1/?key=' + options.backpacktf_key + '&appid=730', function(err, response, body) {
 						if (err) {
@@ -235,8 +221,7 @@ router.get('/backpacktf', function(req, res) {
 							res.json({ success: true, items: lastResult });
 						}
 					});
-				}
-/*				
+				}	
 			} else {
 				res.json({ success: false, error: options.errors.not_premium });
 			}
@@ -244,7 +229,6 @@ router.get('/backpacktf', function(req, res) {
 			res.json({ success: false, error: options.errors.invalid_key });
 		}
 	});
-*/	
 });
 
 // register the router
