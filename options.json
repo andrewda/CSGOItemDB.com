@@ -1,11 +1,4 @@
 {
-    "mysql": {
-        "host": "",
-        "user": "",
-        "port": 3306,
-        "password": "",
-        "database": ""
-    },
     "errors": {
         "missing_params": "missing parameter(s)",
         "invalid_key": "insufficient privileges (unrecognized key)",
