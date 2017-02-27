@@ -1,12 +1,12 @@
 {
     "errors": {
-        "missing_params": 	"missing parameter(s)",
-        "invalid_key": 		"insufficient privileges (unrecognized key)",
-        "not_premium": 		"insufficient privileges (not premium)",
-        "unknown_item": 	"unknown item"
+        "missing_params": "missing parameter(s)",
+        "invalid_key": "insufficient privileges (unrecognized key)",
+        "not_premium": "insufficient privileges (not premium)",
+        "unknown_item": "unknown item"
     },
-    "backpacktf_key": 		"",
-    "update_time": 			7200,
-    "refresh_interval": 	3600,
-    "delete_old_interval": 	9000
+    "backpacktf_key": "",
+    "update_time": 7200,
+    "refresh_interval": 3600,
+    "delete_old_interval": 9000
 }
