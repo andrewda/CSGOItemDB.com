@@ -1,11 +1,9 @@
 var express = require('express');
 var app = express();
 var bodyParser = require('body-parser');
-var mysql = require('mysql');
 var request = require('request');
 var fs = require('fs');
 
-var connection;
 var options = {};
 
 var lastCheck = 0;
