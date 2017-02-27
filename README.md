@@ -28,7 +28,11 @@ Step 2. Edit options.json
 }
 ```
 
-Step 3. Configure your database with config.sql
+Step 3. Download any missing dependencies
+```
+npm update
+```
+
 
 Step 4. Run the server
 
