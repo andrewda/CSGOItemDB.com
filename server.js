@@ -85,7 +85,6 @@ router.get('/', function(req, res) {
 								json = JSON.parse(body);
 							} catch (e) {
 								res.json({ success: false, error: options.errors.unknown_item });
-								console.log('1');
 								return;
 							}
 							
