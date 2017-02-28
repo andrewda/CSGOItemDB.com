@@ -50,11 +50,8 @@ router.get('/', function(req, res) {
 			throw err;
 		}
 
-		keys = 'a';
 		if (keys !== null) {
 			var isPremium = keys.premium;
-
-			isPremium = true;
 
 			if (isPremium) {
 				Prices.findOne({
