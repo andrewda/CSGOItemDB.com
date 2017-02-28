@@ -50,8 +50,11 @@ router.get('/', function(req, res) {
 			throw err;
 		}
 
+		keys = 'a';
 		if (keys !== null) {
 			var isPremium = keys.premium;
+
+			isPremium = true;
 
 			if (isPremium) {
 				Prices.findOne({
@@ -82,6 +85,7 @@ router.get('/', function(req, res) {
 								json = JSON.parse(body);
 							} catch (e) {
 								res.json({ success: false, error: options.errors.unknown_item });
+								console.log('1');
 								return;
 							}
 							
@@ -121,7 +125,57 @@ router.get('/', function(req, res) {
 									lastupdate: current
 								});				
 							} else {
-								res.json({ success: false, error: options.errors.unknown_item });
+								console.log('Attempting to use CSGOFAST-API for '+ query.item);
+
+								request('https://api.csgofast.com/price/all', function(error, response, body) {
+									var json = '';
+
+									try {
+										json = JSON.parse(body);
+									} catch (e) {
+										res.json({ success: false, error: options.errors.unknown_item });
+										return;
+									}
+
+									var current = Math.floor(Date.now() / 1000);
+									if (!error && response.statusCode === 200 && (query.item in json)) {		
+										const a = new Prices({
+											"item": query.item,
+											"current_price": json[query.item].toString().replace('$', ''),
+											"avg_week_price": json[query.item].toString().replace('$', ''),
+											"avg_month_price": json[query.item].toString().replace('$', ''),
+											"lastupdate": current	
+										});
+
+										a.save((err, response) => {
+											if (err) {
+												throw err;
+											}
+										})
+
+										const b = new History({
+											item: query.item,
+											current_price: json[query.item].toString().replace('$', ''),
+											time: current
+										});
+
+										b.save((err, response) => {
+											if (err) {
+												throw err;
+											}
+										})
+								
+										res.json({
+											success: true, 
+											current_price: json[query.item].toString().replace('$', ''),
+											avg_week_price: json[query.item].toString().replace('$', ''),
+											avg_month_price: json[query.item].toString().replace('$', ''),
+											lastupdate: current
+										});							
+									} else {
+										res.json({ success: false, error: options.errors.unknown_item });
+									}						
+								});
 							}
 						});
 					}

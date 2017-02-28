@@ -79,7 +79,45 @@ function refreshPrices() {
 							}
 						});
 					} else {
-						console.log('An error occured receiving price for item: ' + item.item);
+						console.log('Attempting to use CSGOFAST-API for '+ item.item);
+
+						request('https://api.csgofast.com/price/all', function(error, response, body) {
+							var json = '';
+
+							try {
+								json = JSON.parse(body);
+							} catch (e) {
+								res.json({ success: false, error: options.errors.unknown_item });
+								return;
+							}
+
+							var current = Math.floor(Date.now() / 1000);
+							if (!error && response.statusCode === 200 && (item.item in json)) {		
+								Prices.update( {item:item.item}, {$set: {current_price:json[item.item].toString().replace('$', '')} }, (err, response) => {
+									if(err) {
+										throw err;
+									}
+								});
+
+								const a = new History({
+									item: item.item,
+									current_price: json[item.item].toString().replace('$', ''),
+									time: time.toString()
+								});
+
+								a.save((err, response) => {
+									if (err) {
+										throw err;
+									} else {
+										console.log('Succesfully updated ' + item.item + ' w/ ' + json[item.item].toString().replace('$', ''));
+									}
+								});
+							
+								console.log('Succesfully updated ' + item.item + ' w/ ' + json[item.item]);						
+							} else {
+								console.log('An error occured receiving price for item: ' + item.item);
+							}						
+						});
 					}
 				});
 				setTimeout(function() {
