@@ -40,7 +40,7 @@ passport.deserializeUser((obj, done) => {
 passport.use(new SteamStrategy({
 		returnURL: 'http://localhost:'+port+'/auth/steam/return',
 		realm: 'http://localhost:'+port+'/',
-		apiKey: 'E36E5FD3324694270A98D7BB22BC6F03' //'your api key'
+		apiKey: 'your api key'
 	}, (identifier, profile, done) => {
 		return done(null, profile);
 	}
