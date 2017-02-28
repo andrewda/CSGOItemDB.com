@@ -1,6 +1,6 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-module.exports = mongoose.model('Keys', {
+module.exports = mongoose.model("Keys", {
 	key: String,
 	premium: String
 });
