@@ -1,20 +1,19 @@
-var request = require('request');
-var fs = require('fs');
-
-// define constants
-var WEEK_SECONDS = 604800;
-var MONTH_SECONDS = 2592000;
-
-var options = {};
+const 	request = require('request');
+const 	fs 		= require('fs');
 
 const   mongoose = require('mongoose');
 		mongoose.connect('mongodb://127.0.0.1:27017/itemdb');
 
-const Prices = require('./models/Prices');
-const Keys = require('./models/Keys');
-const History = require('./models/History');
+// define constants
+const WEEK_SECONDS 	= 604800;
+const MONTH_SECONDS = 2592000;
+
+const ItemPrice 	= require('./models/Prices');
+const ApiKeys 		= require('./models/Keys');
+const PriceHistory	= require('./models/History');
 
 // get the options from `options.json`
+var options = {};
 try {
 	options = JSON.parse(fs.readFileSync('options.json'));
 } catch (err) {
@@ -27,7 +26,7 @@ try {
 function refreshPrices() {
 	var current = Math.floor(Date.now() / 1000);
 
-	Prices.find({
+	ItemPrice.find({
 		lastupdate: {$lt:(parseInt(current-options.update_time))}
 	}, (err, prices) => {
 		if(err) {
@@ -38,7 +37,7 @@ function refreshPrices() {
 			var time = Math.floor(Date.now() / 1000);
 
 			prices.forEach(function(item) {
-				Prices.update( {item: item.item}, {$set: {lastupdate: current}}, (err, response) => {
+				ItemPrice.update( {item: item.item}, {$set: {lastupdate: current}}, (err, response) => {
 					if(err) {
 						throw err;
 					}
@@ -58,19 +57,19 @@ function refreshPrices() {
 					if (!error && response.statusCode === 200 && json.lowest_price !== undefined) {
 						time = Math.floor(Date.now() / 1000);
 
-						Prices.update( {item:item.item}, {$set: {current_price:parseFloat(json.lowest_price.replace('$', '')).toString()} }, (err, response) => {
+						ItemPrice.update( {item:item.item}, {$set: {current_price:parseFloat(json.lowest_price.replace('$', '')).toString()} }, (err, response) => {
 							if(err) {
 								throw err;
 							}
 						});
 
-						const a = new History({
+						const history = new PriceHistory({
 							item: item.item,
 							current_price: parseFloat(json.lowest_price.replace('$', '')).toString(),
 							time: time.toString()
 						});
 
-						a.save((err, response) => {
+						history.save((err, response) => {
 							if (err) {
 								throw err;
 							} else {
@@ -92,19 +91,19 @@ function refreshPrices() {
 
 							var current = Math.floor(Date.now() / 1000);
 							if (!error && response.statusCode === 200 && (item.item in json)) {		
-								Prices.update( {item:item.item}, {$set: {current_price:json[item.item].toString().replace('$', '')} }, (err, response) => {
+								ItemPrice.update( {item:item.item}, {$set: {current_price:json[item.item].toString().replace('$', '')} }, (err, response) => {
 									if(err) {
 										throw err;
 									}
 								});
 
-								const a = new History({
+								const history = new PriceHistory({
 									item: item.item,
 									current_price: json[item.item].toString().replace('$', ''),
 									time: time.toString()
 								});
 
-								a.save((err, response) => {
+								history.save((err, response) => {
 									if (err) {
 										throw err;
 									} else {
@@ -121,7 +120,7 @@ function refreshPrices() {
 					time = Math.floor(Date.now() / 1000);
 
 					// Update Weekly Price
-					History.find({
+					PriceHistory.find({
 						item: item.item,
 						time: {$lt:(time - WEEK_SECONDS)}
 					}, (err, his) => {
@@ -138,7 +137,7 @@ function refreshPrices() {
 						});
 
 						if (!isNaN(total/num) && num !== 0) {
-							Prices.update( {item: item}, {$set: {avg_week_price: (total/num).toFixed(2).toString()} }, (err, response) => {
+							ItemPrice.update( {item: item}, {$set: {avg_week_price: (total/num).toFixed(2).toString()} }, (err, response) => {
 								if(err) {
 									throw err;
 								}
@@ -147,7 +146,7 @@ function refreshPrices() {
 					});
 
 					// Update Monthly Price
-					History.find({
+					PriceHistory.find({
 						item: item.item,
 						time: {$lt:(time - MONTH_SECONDS)}
 					}, (err, his) => {
@@ -164,7 +163,7 @@ function refreshPrices() {
 						});
 
 						if (!isNaN(total/num) && num !== 0) {
-							Prices.update( {item: item}, {$set: {avg_month_price: (total/num).toFixed(2).toString()} }, (err, response) => {
+							ItemPrice.update( {item: item}, {$set: {avg_month_price: (total/num).toFixed(2).toString()} }, (err, response) => {
 								if(err) {
 									throw err;
 								}
@@ -184,7 +183,7 @@ function refreshPrices() {
 function deleteOld() {
 	var time = Math.floor(Date.now() / 1000);
 
-	History.remove({
+	PriceHistory.remove({
 		"time":{$lte:(time - MONTH_SECONDS).toString()}
 	}, (err, response) => {
 		if(err) {
