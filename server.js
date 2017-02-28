@@ -1,23 +1,20 @@
-var express = require('express');
-var app = express();
-var bodyParser = require('body-parser');
-var request = require('request');
-var fs = require('fs');
+const express = require('express');
+const app = express();
 
-var options = {};
+const bodyParser = require('body-parser');
+const fs = require('fs');
+const request = require('request');
 
-var lastCheck = 0;
-var lastResult;
+const mongoose = require('mongoose');
+	  mongoose.connect('mongodb://127.0.0.1:27017/itemdb');
 
+var options = {},
+	lastCheck = 0,
+	lastResult;
 
-const 	mongoose = require('mongoose');
-		mongoose.connect('mongodb://127.0.0.1:27017/itemdb');
-
-const Prices = require('./models/Prices');
-const Keys = require('./models/Keys');
-const History = require('./models/History');
-
-
+const ItemPrice 	= require('./models/Prices');
+const ApiKeys 		= require('./models/Keys');
+const PriceHistory	= require('./models/History');
 
 // get the options from `options.json`
 try {
@@ -29,8 +26,8 @@ try {
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-var port = process.env.PORT || 8080;
-var router = express.Router();
+const port = process.env.PORT || 8080;
+const router = express.Router();
 
 ////////////////////
 // On GET request //
@@ -43,7 +40,7 @@ router.get('/', function(req, res) {
 		return;
 	}
 
-	Keys.findOne({
+	ApiKeys.findOne({
 		key: query.key
 	}, (err, keys) => {
 		if(err) {
@@ -54,24 +51,24 @@ router.get('/', function(req, res) {
 			var isPremium = keys.premium;
 
 			if (isPremium) {
-				Prices.findOne({
+				ItemPrice.findOne({
 					item: query.item
-				}, (err, prices) => {
+				}, (err, price) => {
 					if(err) {
 						throw err;
 					}
 
-					if(prices != null) {
+					if(price != null) {
 						var current_price, avg_week_price, avg_month_price;
 
-						if (prices.current_price !== undefined && prices.avg_week_price !== undefined && prices.avg_month_price !== undefined) {
-							current_price = prices.current_price;
-							avg_week_price = prices.avg_week_price;
-							avg_month_price = prices.avg_month_price;
+						if (price.current_price !== undefined && price.avg_week_price !== undefined && price.avg_month_price !== undefined) {
+							current_price 	= price.current_price;
+							avg_week_price 	= price.avg_week_price;
+							avg_month_price = price.avg_month_price;
 						}
 
 						if (current_price !== undefined && avg_week_price !== undefined && avg_month_price !== undefined) {
-							res.json({ success: true, current_price: current_price, avg_week_price: avg_week_price, avg_month_price: avg_month_price, lastupdate: prices.lastupdate });
+							res.json({ success: true, current_price: current_price, avg_week_price: avg_week_price, avg_month_price: avg_month_price, lastupdate: price.lastupdate });
 						}					
 					} else {
 						// if the item is not found in our database, get the data from the market
@@ -87,7 +84,7 @@ router.get('/', function(req, res) {
 							
 							var current = Math.floor(Date.now() / 1000);
 							if (!error && response.statusCode === 200 && json.lowest_price !== undefined && json.median_price !== undefined) {
-								const a = new Prices({
+								const item = new ItemPrice({
 									"item": query.item,
 									"current_price": json.lowest_price.replace('$', ''),
 									"avg_week_price": json.median_price.replace('$', ''),
@@ -95,19 +92,19 @@ router.get('/', function(req, res) {
 									"lastupdate": current	
 								});
 
-								a.save((err, response) => {
+								item.save((err, response) => {
 									if (err) {
 										throw err;
 									}
 								})
 
-								const b = new History({
+								const history = new PriceHistory({
 									item: query.item,
 									current_price: json.median_price.replace('$', ''),
 									time: current
 								});
 
-								b.save((err, response) => {
+								history.save((err, response) => {
 									if (err) {
 										throw err;
 									}
@@ -135,7 +132,7 @@ router.get('/', function(req, res) {
 
 									var current = Math.floor(Date.now() / 1000);
 									if (!error && response.statusCode === 200 && (query.item in json)) {		
-										const a = new Prices({
+										const item = new ItemPrice({
 											"item": query.item,
 											"current_price": json[query.item].toString().replace('$', ''),
 											"avg_week_price": json[query.item].toString().replace('$', ''),
@@ -143,19 +140,19 @@ router.get('/', function(req, res) {
 											"lastupdate": current	
 										});
 
-										a.save((err, response) => {
+										item.save((err, response) => {
 											if (err) {
 												throw err;
 											}
 										})
 
-										const b = new History({
+										const history = new PriceHistory({
 											item: query.item,
 											current_price: json[query.item].toString().replace('$', ''),
 											time: current
 										});
 
-										b.save((err, response) => {
+										history.save((err, response) => {
 											if (err) {
 												throw err;
 											}
@@ -193,18 +190,18 @@ router.get('/all', function(req, res) {
 		return;
 	}
 	
-	Keys.findOne({
+	ApiKeys.findOne({
 		key: query.key
-	}, (err, keys) => {
+	}, (err, key) => {
 		if(err) {
 			throw err;
 		}
 
-		if (keys !== null) {
-			var isPremium = keys.premium;
+		if (key !== null) {
+			var isPremium = key.premium;
 
 			if (isPremium) {		
-				Prices.find({}, (err, prices) => {
+				ItemPrice.find({}, (err, prices) => {
 					if(err) {
 						throw err;
 					}
@@ -216,7 +213,6 @@ router.get('/all', function(req, res) {
 							current_price: item.current_price,
 						};
 					});
-
 					res.json({ success: true, items: output });
 				});
 			} else {
@@ -237,15 +233,15 @@ router.get('/backpacktf', function(req, res) {
 	}
 	
 	// check if the key exists
-	Keys.findOne({
+	ApiKeys.findOne({
 		key: query.key
-	}, (err, keys) => {
+	}, (err, key) => {
 		if(err) {
 			throw err;
 		}
 
-		if (keys !== null) {
-			var isPremium = keys.premium;
+		if (key !== null) {
+			var isPremium = key.premium;
 
 			if(isPremium) {
 				if (Math.floor(Date.now() / 1000) - lastCheck >= 120) {
