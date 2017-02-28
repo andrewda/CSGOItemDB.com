@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Request API</title>
+    </head>
+    <body>
+        {{#if user}}
+        <h1>Welcome, {{user.personaname}}! <sub><a href="/logout">Logout</a></sub></h1>
+        <br />
+            {{#if key}}
+                Your key is: {{key}} .
+            {{else}}
+                Click <a href="/api/register">here</a> to register.
+            {{/if}}
+        {{else}}
+        <a href="/auth/steam">Click here to login</a>
+        {{/if}}
+    </body>
+</html>

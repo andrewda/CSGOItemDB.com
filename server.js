@@ -1,9 +1,12 @@
-const express = require('express');
-const app = express();
-
-const bodyParser = require('body-parser');
-const fs = require('fs');
-const request = require('request');
+const express 		= require('express');
+const handlebars 	= require('express-handlebars');
+const session 		= require('express-session');
+const passport 		= require('passport');
+const SteamStrategy = require('passport-steam').Strategy;
+const path 			= require('path');
+const bodyParser 	= require('body-parser');
+const fs 			= require('fs');
+const request 		= require('request');
 
 const mongoose = require('mongoose');
 	  mongoose.connect('mongodb://127.0.0.1:27017/itemdb');
@@ -23,11 +26,125 @@ try {
 	throw err;
 }
 
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-
 const port = process.env.PORT || 8080;
 const router = express.Router();
+
+passport.serializeUser((user, done) => {
+	done(null, user._json);
+});
+
+passport.deserializeUser((obj, done) => {
+	done(null, obj);
+});
+
+passport.use(new SteamStrategy({
+		returnURL: 'http://localhost:'+port+'/auth/steam/return',
+		realm: 'http://localhost:'+port+'/',
+		apiKey: 'E36E5FD3324694270A98D7BB22BC6F03' //'your api key'
+	}, (identifier, profile, done) => {
+		return done(null, profile);
+	}
+));
+
+const 	hbs = handlebars.create();
+const 	app = express();
+		app.engine('hbs', hbs.engine);
+		app.set('views', path.join(__dirname, 'views'));
+		app.set('view engine', 'hbs');
+		app.use(bodyParser.urlencoded({ extended: true }));
+		app.use(bodyParser.json());
+		app.use(session({
+			secret: 'some secret string',
+			name: 'U_SESSION',
+			resave: true,
+			saveUninitialized: true
+		}));
+		app.use(passport.initialize());
+		app.use(passport.session());
+
+var key = '';
+app.get('/', (req, res) => {
+	if(req.user !== undefined) {
+		ApiKeys.findOne({
+			steamid: req.user.steamid
+		}, (err, key) => {
+			if(err) {
+				throw err;
+			} else {
+				res.render('main', {
+					user: req.user,
+					key: key.key
+				});
+			}
+		});
+	} else {
+		res.render('main', {
+			user: req.user,
+			key: key
+		});		
+	}
+});
+
+app.get(/^\/auth\/steam(\/return)?$/,
+	passport.authenticate('steam', { failureRedirect: '/' }),
+	(req, res) => {
+		res.redirect('/');
+	});
+
+app.get('/logout', (req, res) => {
+	req.logout();
+	res.redirect('/');
+});
+
+router.get('/register', function(req, res) {
+	if(req.user == undefined) {
+		console.log('1');
+		res.redirect('/');
+	} else {
+		ApiKeys.findOne({
+			steamid: req.user.steamid
+		}, (err, key) => {
+			if(err) {
+				throw err;
+			}
+
+			if(key !== null) {
+				console.log('2');
+				res.redirect('/');
+			} else {
+				var randomKey = (Math.random().toString(36).substring(7)).toString();
+
+				ApiKeys.findOne({
+					key: randomKey
+				}, (err, key) => {
+					if(err) {
+						throw err;
+					}
+
+					if(key == null) {
+						const apiKey = new ApiKeys({
+							"key": randomKey,
+							"steamid": req.user.steamid,
+							"premium": true // Assuming everybody who registers gets access					
+						});
+
+						apiKey.save((err, response) => {
+							if (err) {
+								throw err;
+							} else {
+								res.redirect('/');
+								console.log('added key');
+							}
+						});
+					} else {
+						console.log('3');
+						res.redirect('/api/register');
+					}
+				});
+			}
+		});
+	}
+});
 
 ////////////////////
 // On GET request //
@@ -42,13 +159,13 @@ router.get('/', function(req, res) {
 
 	ApiKeys.findOne({
 		key: query.key
-	}, (err, keys) => {
+	}, (err, key) => {
 		if(err) {
 			throw err;
 		}
 
-		if (keys !== null) {
-			var isPremium = keys.premium;
+		if (key !== null) {
+			var isPremium = key.premium;
 
 			if (isPremium) {
 				ItemPrice.findOne({
@@ -232,7 +349,6 @@ router.get('/backpacktf', function(req, res) {
 		return;
 	}
 	
-	// check if the key exists
 	ApiKeys.findOne({
 		key: query.key
 	}, (err, key) => {
