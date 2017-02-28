@@ -37,7 +37,6 @@ function refreshPrices() {
 		if(prices.length > 0) {
 			var time = Math.floor(Date.now() / 1000);
 
-			console.log(prices);
 			prices.forEach(function(item) {
 				Prices.update( {item: item.item}, {$set: {lastupdate: current}}, (err, response) => {
 					if(err) {
@@ -87,7 +86,7 @@ function refreshPrices() {
 							try {
 								json = JSON.parse(body);
 							} catch (e) {
-								res.json({ success: false, error: options.errors.unknown_item });
+								console.log(item.item + " not found in the Steam Market");
 								return;
 							}
 
@@ -112,8 +111,6 @@ function refreshPrices() {
 										console.log('Succesfully updated ' + item.item + ' w/ ' + json[item.item].toString().replace('$', ''));
 									}
 								});
-							
-								console.log('Succesfully updated ' + item.item + ' w/ ' + json[item.item]);						
 							} else {
 								console.log('An error occured receiving price for item: ' + item.item);
 							}						
