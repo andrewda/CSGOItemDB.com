@@ -70,11 +70,16 @@ app.get('/', (req, res) => {
 		}, (err, key) => {
 			if(err) {
 				throw err;
-			} else {
+			} else if (key.key) {
 				res.render('main', {
 					user: req.user,
 					key: key.key
 				});
+			} else {
+				res.render('main', {
+					user: req.user,
+					key: key
+				});			
 			}
 		});
 	} else {
@@ -88,7 +93,7 @@ app.get('/', (req, res) => {
 app.get(/^\/auth\/steam(\/return)?$/,
 	passport.authenticate('steam', { failureRedirect: '/' }),
 	(req, res) => {
-		res.redirect('/');
+		res.redirect('/api/register');
 	});
 
 app.get('/logout', (req, res) => {
