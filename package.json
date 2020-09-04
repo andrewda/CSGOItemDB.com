@@ -4,7 +4,7 @@
   "description": "A free API to get the most accurate CSGO prices for high tier and low tier items.",
   "main": "server.js",
   "dependencies": {
-    "mongodb": "^2.2.24",
+    "mongodb": "^3.6.1",
     "mongoose": "^5.7.6",
     "body-parser": "^1.13.3",
     "express": "^4.14.1",
